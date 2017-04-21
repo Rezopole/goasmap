@@ -1,0 +1,6 @@
+data
+goasmap
+gobgp.conf
+asn.rezopole.net
+vendor/*
+!vendor/vendor.json
