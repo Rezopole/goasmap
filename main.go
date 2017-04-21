@@ -161,38 +161,6 @@ func InitRadix() {
 			GetIPS6(v)
 		}
 	}
-	// f, err := os.Open("/home/jybateman/work/src/goasmap/data/ipv4_list")
-	// if err == nil {
-	// 	read := csv.NewReader(f)
-	// 	for rec, err := read.Read(); err == nil; rec, err = read.Read() {
-	// 		rdx := table.CidrToRadixkey(rec[0])
-	// 		ASList.RPfx.Insert(rdx, []string{"AS"+rec[1], rec[0]})
-	// 		if !stringInSlice(rec[0], ASList.As["AS"+rec[1]].Prefix) {
-	// 			ASList.s.Lock()
-	// 			tmp := ASList.As["AS"+rec[1]]
-	// 			tmp.Prefix = append(ASList.As["AS"+rec[1]].Prefix, rec[0])
-	// 			ASList.As["AS"+rec[1]] = tmp
-	// 			ASList.s.Unlock()
-	// 		}
-	// 	}
-	// 	f.Close()
-	// }
-	// f, err = os.Open("/home/jybateman/work/src/goasmap/data/ipv6_list")
-	// if err == nil {
-	// 	read := csv.NewReader(f)
-	// 	for rec, err := read.Read(); err == nil; rec, err = read.Read() {
-	// 		rdx := table.CidrToRadixkey(rec[0])
-	// 		ASList.RPfx6.Insert(rdx, []string{"AS"+rec[1], rec[0]})
-	// 		if !stringInSlice(rec[0], ASList.As["AS"+rec[1]].Prefix) {
-	// 			ASList.s.Lock()
-	// 			tmp := ASList.As["AS"+rec[1]]
-	// 			tmp.Prefix = append(ASList.As["AS"+rec[1]].Prefix, rec[0])
-	// 			ASList.As["AS"+rec[1]] = tmp
-	// 			ASList.s.Unlock()
-	// 		}
-	// 	}
-	// 	f.Close()
-	// }
 }
 
 func main() {
