@@ -1,6 +1,5 @@
-## Running
-https://github.com/osrg/gobgp
-Tested with GoBGP V1.17 as of 2017/03/02
+### GoASMap
+Publish IP(v4/v6) -> ASnum bindings via dns
 
 ## Prerequisites
 You need to install Go 1.5 or later.
