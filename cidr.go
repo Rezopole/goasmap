@@ -1,4 +1,4 @@
-package goasmap
+package main
 
 import (
 	"net"
