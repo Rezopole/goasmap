@@ -84,11 +84,17 @@ func StartBGP() *gobgp.BgpServer {
 	v.SetConfigType("toml")
 	v.SetConfigFile(cfg)
 	v.ReadInConfig()
-	v.Unmarshal(&conf)	
-	v.Unmarshal(&gconf)
+	err := v.Unmarshal(&conf)
+	if err != nil {
+		Log.Err(err.Error())
+	}
+	err := v.Unmarshal(&gconf)
+	if err != nil {
+		Log.Err(err.Error())
+	}
 	s := gobgp.NewBgpServer()
 	go s.Serve()
-	err := s.Start(&conf.Global)
+	err = s.Start(&conf.Global)
 	if err != nil {
 		Log.Err(err.Error())
 		return nil
