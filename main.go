@@ -83,12 +83,15 @@ func StartBGP() *gobgp.BgpServer {
         v := viper.New()
 	v.SetConfigType("toml")
 	v.SetConfigFile(cfg)
-	v.ReadInConfig()
-	err := v.Unmarshal(&conf)
+	err := v.ReadInConfig()
 	if err != nil {
 		Log.Err(err.Error())
 	}
-	err := v.Unmarshal(&gconf)
+	err = v.Unmarshal(&conf)
+	if err != nil {
+		Log.Err(err.Error())
+	}
+	err = v.Unmarshal(&gconf)
 	if err != nil {
 		Log.Err(err.Error())
 	}
