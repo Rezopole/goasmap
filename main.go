@@ -175,21 +175,29 @@ func InitRadix() {
 func main() {
 	var as string
 	ASList.As = make(map[string]Data)
+
+	// Init log
+	InitLog(os.Stdout, os.Stderr)
 	
 	// Parse flags
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
-	flag.StringVar(&cfg, "f", "", "Config file")
+	flag.StringVar(&cfg, "f", "/etc/goasmap/goasmap.conf", "Config file")
 	flag.Parse()
 
 	// Init Radix
 	InitRadix()
+	if debug {
+		Log.Debug("Radix tree initialized with custom IPv4 and IPv6")
+	}
 	
-	InitLog(os.Stdout, os.Stderr)
 	s := StartBGP()
 	if s == nil {
 		return
 	}
-	
+	if debug {
+		Log.Debug("BGP server running")
+	}
+		
 	// Init and Launch DNS
 	udpdns := &dns.Server{Addr: gconf.Dns.Ip+":"+gconf.Dns.Port, Net: "udp"}
 	go udpdns.ListenAndServe()
@@ -198,6 +206,9 @@ func main() {
 	go tcpdns.ListenAndServe()
 	dns.HandleFunc(".", handleRequest)
 	InitDnsZone()	
+	if debug {
+		Log.Debug("DNS server running")
+	}
 
 	// Start grpc Server
 	grpcServer := api.NewGrpcServer(s, "127.0.0.1:50051")
