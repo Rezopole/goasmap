@@ -12,10 +12,14 @@ import (
 
 func InitDnsZone() {
 	gconf.Dns.MRRs = make(map[string][]dns.RR)
-	f, _ := os.Open(gconf.Dns.Zone)
+	f, err := os.Open(gconf.Dns.Zone)
+	if err != nil {
+		Log.Warning(err.Error())
+		return
+	}
 	defer f.Close()
 	read := bufio.NewReader(f)
-	to := dns.ParseZone(read, "", "")
+	to := dns.ParseZone(read, ".", "")
 	for x := range to {
 		gconf.Dns.MRRs[x.RR.Header().Name] = append(gconf.Dns.MRRs[x.RR.Header().Name], x.RR)
 		gconf.Dns.RRs = append(gconf.Dns.RRs, x.RR)
@@ -30,7 +34,7 @@ func handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 	m.SetReply(r)
 	if atomic.LoadInt32(&gconf.Dns.curr) >= gconf.Dns.Max {
 		w.WriteMsg(m)
-		Log.Debug("Max number of simultaneous requests reached")
+		Log.Warning("Max number of simultaneous requests reached")
 		return
 	}
 	if debug {
@@ -72,12 +76,15 @@ func handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 		}
 	} else {
 		// for idx := range gconf.Dns.RRs {
-			// if gconf.Dns.RRs[idx].Header().Rrtype == r.Question[0].Qtype && dns.CompareDomainName(r.Question[0].Name, gconf.Dns.RRs[idx].Header().Name) >= 3 {
+		// if gconf.Dns.RRs[idx].Header().Rrtype == r.Question[0].Qtype && dns.CompareDomainName(r.Question[0].Name, gconf.Dns.RRs[idx].Header().Name) >= 3 {
+		
 		for idx := range gconf.Dns.MRRs[r.Question[0].Name] {
 			if gconf.Dns.MRRs[r.Question[0].Name][idx].Header().Rrtype == r.Question[0].Qtype {
 				m.Answer = append(m.Answer, gconf.Dns.MRRs[r.Question[0].Name][idx])
 			}
 		}
+		
+		// m.Answer = gconf.Dns.MRRs[r.Question[0].Name]
 	}
 	atomic.AddInt32(&gconf.Dns.curr, -1)
 	w.WriteMsg(m)
