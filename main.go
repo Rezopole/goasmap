@@ -1,20 +1,21 @@
 package main
 
 import (
-	"os"
-	"sync"
 	"flag"
-	"strings"
+	"os"
 	"strconv"
-	
-	"github.com/osrg/gobgp/config"
-	"github.com/osrg/gobgp/table"
-	api "github.com/osrg/gobgp/api"
-	gobgp "github.com/osrg/gobgp/server"
-	"github.com/spf13/viper"
-	"github.com/coreos/go-systemd/daemon"	
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/armon/go-radix"
+	"github.com/coreos/go-systemd/daemon"
 	"github.com/miekg/dns"
+	api "github.com/osrg/gobgp/api"
+	"github.com/osrg/gobgp/config"
+	gobgp "github.com/osrg/gobgp/server"
+	"github.com/osrg/gobgp/table"
+	"github.com/spf13/viper"
 )
 
 var ASList ASNS
@@ -23,31 +24,34 @@ var debug bool
 var cfg string
 
 type Conf struct {
-	Dns dnsconf	`mapstructure:"dns"`
+	Dns dnsconf `mapstructure:"dns"`
 }
 
 type dnsconf struct {
-	Ip string	`mapstructure:"ip"`
-	Port string	`mapstructure:"port"`
-	Zone string	`mapstructure:"zone"`
-	Max int32	`mapstructure:"max"`
-	RRs []dns.RR
+	Ip   string `mapstructure:"ip"`
+	Port string `mapstructure:"port"`
+	Zone string `mapstructure:"zone"`
+	Max  int32  `mapstructure:"max"`
+	RRs  []dns.RR
 	MRRs map[string][]dns.RR
 	curr int32
 }
 
 type Data struct {
-	ASName string
-	CC string
-	Date string
-	Prefix []string
+	ASName     string
+	CC         string
+	Date       string
+	Rir        string
+	Prefix     []string
+	lastUpdate time.Time
 }
 
 type ASNS struct {
-	As map[string]Data
-	RPfx *radix.Tree
-	RPfx6 *radix.Tree
-	s  sync.RWMutex
+	As      map[string]Data
+	RPfx    *radix.Tree
+	RPfx6   *radix.Tree
+	DelegAs map[string]SDeleg
+	s       sync.RWMutex
 }
 
 // Remove prefix and as from list
@@ -79,12 +83,12 @@ func RemovePrefix(pfx string) {
 // Add Neighbors to receive updates TODO add conf file
 func StartBGP() *gobgp.BgpServer {
 	var conf config.BgpConfigSet
-	
-        v := viper.New()
+
+	v := viper.New()
 	v.SetConfigType("toml")
 	v.SetConfigFile(cfg)
 	v.ReadInConfig()
-	v.Unmarshal(&conf)	
+	v.Unmarshal(&conf)
 	v.Unmarshal(&gconf)
 	s := gobgp.NewBgpServer()
 	go s.Serve()
@@ -108,7 +112,7 @@ func GetIPS4(v *viper.Viper) {
 	for idx := range ips {
 		pfx := strings.Split(ips[idx], ",")
 		rdx := table.CidrToRadixkey(pfx[0])
-		ASList.RPfx.Insert(rdx, []string{"AS"+pfx[1], pfx[0]})
+		ASList.RPfx.Insert(rdx, []string{"AS" + pfx[1], pfx[0]})
 		if !stringInSlice(pfx[0], ASList.As["AS"+pfx[1]].Prefix) {
 			ASList.s.Lock()
 			tmp := ASList.As["AS"+pfx[1]]
@@ -124,7 +128,7 @@ func GetIPS6(v *viper.Viper) {
 	for idx := range ips {
 		pfx := strings.Split(ips[idx], ",")
 		rdx := table.CidrToRadixkey(pfx[0])
-		ASList.RPfx6.Insert(rdx, []string{"AS"+pfx[1], pfx[0]})
+		ASList.RPfx6.Insert(rdx, []string{"AS" + pfx[1], pfx[0]})
 		if !stringInSlice(pfx[0], ASList.As["AS"+pfx[1]].Prefix) {
 			ASList.s.Lock()
 			tmp := ASList.As["AS"+pfx[1]]
@@ -135,12 +139,12 @@ func GetIPS6(v *viper.Viper) {
 	}
 }
 
-// Init all reserved IPv4 and IPv6 ni radix tree
-func InitRadix() {	
+// Init all reserved IPv4 and IPv6 in radix tree
+func InitRadix() {
 	ASList.RPfx = radix.New()
 	ASList.RPfx6 = radix.New()
-	
-        v := viper.New()
+
+	v := viper.New()
 	v.SetConfigType("toml")
 	v.SetConfigFile(cfg)
 	if v.ReadInConfig() == nil {
@@ -166,7 +170,11 @@ func InitRadix() {
 func main() {
 	var as string
 	ASList.As = make(map[string]Data)
-	
+
+	InitAsn()
+	go InitUnkAs()
+	go UpdateDelegation()
+
 	// Parse flags
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	flag.StringVar(&cfg, "f", "", "Config file")
@@ -174,34 +182,34 @@ func main() {
 
 	// Init Radix
 	InitRadix()
-	
+
 	InitLog(os.Stdout, os.Stderr)
 	s := StartBGP()
 	if s == nil {
 		return
 	}
-	
+
 	// Init and Launch DNS
-	udpdns := &dns.Server{Addr: gconf.Dns.Ip+":"+gconf.Dns.Port, Net: "udp"}
+	udpdns := &dns.Server{Addr: gconf.Dns.Ip + ":" + gconf.Dns.Port, Net: "udp"}
 	go udpdns.ListenAndServe()
 	dns.HandleFunc(".", handleRequest)
-	tcpdns := &dns.Server{Addr: gconf.Dns.Ip+":"+gconf.Dns.Port, Net: "tcp"}
+	tcpdns := &dns.Server{Addr: gconf.Dns.Ip + ":" + gconf.Dns.Port, Net: "tcp"}
 	go tcpdns.ListenAndServe()
 	dns.HandleFunc(".", handleRequest)
-	InitDnsZone()	
+	InitDnsZone()
 
 	// Start grpc Server
 	grpcServer := api.NewGrpcServer(s, "127.0.0.1:50051")
 	go func() {
 		if err := grpcServer.Serve(); err != nil {
-			Log.Err("failed to listen grpc port: "+err.Error())
+			Log.Err("failed to listen grpc port: " + err.Error())
 			os.Exit(1)
 		}
 	}()
-	
+
 	// Send notification to systemd
 	daemon.SdNotify(false, "NOTIFY_SOCKET")
-	
+
 	// Only listen to update messages
 	w := s.Watch(gobgp.WatchUpdate(false))
 	for {
@@ -214,10 +222,10 @@ func main() {
 				pfx := path.GetNlri().String()
 				if !path.IsWithdraw {
 					if debug {
-						Log.Debug("Learned prefix: "+pfx+". Nexthop: "+path.GetNexthop().String())
+						Log.Debug("Learned prefix: " + pfx + ". Nexthop: " + path.GetNexthop().String())
 					}
 					aslist := path.GetAsList()
-					as = "AS"+strconv.FormatUint(uint64(aslist[len(aslist)-1]), 10)
+					as = "AS" + strconv.FormatUint(uint64(aslist[len(aslist)-1]), 10)
 					rdx := table.CidrToRadixkey(pfx)
 					if strings.Contains(pfx, ".") {
 						if _, ok := ASList.RPfx.Get(rdx); !ok {
@@ -242,7 +250,7 @@ func main() {
 					}
 				} else {
 					if debug {
- 						Log.Debug("Withdrawn prefix: "+pfx+". Nexthop: "+path.GetNexthop().String())
+						Log.Debug("Withdrawn prefix: " + pfx + ". Nexthop: " + path.GetNexthop().String())
 					}
 					ASList.s.Lock()
 					RemovePrefix(pfx)
