@@ -1,12 +1,12 @@
 package main
 
 import (
-	"os"
 	"bufio"
-	"strings"
+	"os"
 	"strconv"
+	"strings"
 	"sync/atomic"
-	
+
 	"github.com/miekg/dns"
 )
 
@@ -34,11 +34,11 @@ func handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 		return
 	}
 	if debug {
-		Log.Debug(strconv.Itoa(int(atomic.LoadInt32(&gconf.Dns.curr)))+" DNS requests")
+		Log.Debug(strconv.Itoa(int(atomic.LoadInt32(&gconf.Dns.curr))) + " DNS requests")
 	}
 	atomic.AddInt32(&gconf.Dns.curr, 1)
 	if debug {
-		Log.Debug("Received request: "+r.String())
+		Log.Debug("Received request: " + r.String())
 	}
 	if r.Question[0].Qtype == dns.TypeTXT {
 		name := r.Question[0].Name
@@ -72,7 +72,7 @@ func handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 		}
 	} else {
 		// for idx := range gconf.Dns.RRs {
-			// if gconf.Dns.RRs[idx].Header().Rrtype == r.Question[0].Qtype && dns.CompareDomainName(r.Question[0].Name, gconf.Dns.RRs[idx].Header().Name) >= 3 {
+		// if gconf.Dns.RRs[idx].Header().Rrtype == r.Question[0].Qtype && dns.CompareDomainName(r.Question[0].Name, gconf.Dns.RRs[idx].Header().Name) >= 3 {
 		for idx := range gconf.Dns.MRRs[r.Question[0].Name] {
 			if gconf.Dns.MRRs[r.Question[0].Name][idx].Header().Rrtype == r.Question[0].Qtype {
 				m.Answer = append(m.Answer, gconf.Dns.MRRs[r.Question[0].Name][idx])
