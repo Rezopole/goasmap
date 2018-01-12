@@ -2,5 +2,7 @@ data
 goasmap
 gobgp.conf
 asn.rezopole.net
+vcmdb.go
+rabbitmq.go
 vendor/*
 !vendor/vendor.json
