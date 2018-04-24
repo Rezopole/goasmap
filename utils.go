@@ -151,15 +151,13 @@ func getPfx(as string) []string {
 
 			GetAsn(upperAs[2:])
 
-			for i := 0; i < len(ASList.As[upperAs].Prefix); i++ {
-				res := upperAs[2:] + " | " + ASList.As[upperAs].Prefix[i]
-				_, ok := ASList.DelegAs[upperAs[2:]]
-				if ok {
-					res += " | " + ASList.DelegAs[upperAs[2:]].CC + " | " + ASList.DelegAs[upperAs[2:]].Rir + " | " + ASList.DelegAs[upperAs[2:]].Date
-				}
-				res += " | " + ASList.As[upperAs].ASName
-				ans = append(ans, res)
+			res := upperAs[2:]
+			_, ok := ASList.DelegAs[upperAs[2:]]
+			if ok {
+				res += " | " + ASList.DelegAs[upperAs[2:]].CC + " | " + ASList.DelegAs[upperAs[2:]].Rir + " | " + ASList.DelegAs[upperAs[2:]].Date
 			}
+			res += " | " + ASList.As[upperAs].ASName
+			ans = append(ans, res)
 			return ans
 		}
 	}
