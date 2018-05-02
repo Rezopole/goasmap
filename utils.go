@@ -76,6 +76,8 @@ func getAs4(rip []string) []string {
 			_, ok = ASList.DelegAs[data[0][2:]]
 			if ok {
 				res += " | " + ASList.DelegAs[data[0][2:]].CC + " | " + ASList.DelegAs[data[0][2:]].Rir + " | " + ASList.DelegAs[data[0][2:]].Date
+			} else {
+				res += " | | |"
 			}
 			res += " | " + ASList.As[data[0]].ASName
 			ases = append(ases, res)
@@ -131,6 +133,8 @@ func getAs6(rip []string) []string {
 			_, ok = ASList.DelegAs[data[0][2:]]
 			if ok {
 				res += " | " + ASList.DelegAs[data[0][2:]].CC + " | " + ASList.DelegAs[data[0][2:]].Rir + " | " + ASList.DelegAs[data[0][2:]].Date
+			} else {
+				res += " | | |"
 			}
 			res += " | " + ASList.As[data[0]].ASName
 			ases = append(ases, res)
@@ -155,6 +159,8 @@ func getPfx(as string) []string {
 			_, ok := ASList.DelegAs[upperAs[2:]]
 			if ok {
 				res += " | " + ASList.DelegAs[upperAs[2:]].CC + " | " + ASList.DelegAs[upperAs[2:]].Rir + " | " + ASList.DelegAs[upperAs[2:]].Date
+			} else {
+				res += " | | |"
 			}
 			res += " | " + ASList.As[upperAs].ASName
 			ans = append(ans, res)
