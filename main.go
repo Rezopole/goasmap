@@ -152,15 +152,15 @@ func InitRadix() {
 		GetIPS6(v)
 	}
 	inc := v.GetStringSlice("ipv4.include")
+	inc6 := v.GetStringSlice("ipv6.include")
 	for idx := range inc {
 		v.SetConfigFile(inc[idx])
 		if v.ReadInConfig() == nil {
 			GetIPS4(v)
 		}
 	}
-	inc = v.GetStringSlice("ipv6.include")
-	for idx := range inc {
-		v.SetConfigFile(inc[idx])
+	for idx := range inc6 {
+		v.SetConfigFile(inc6[idx])
 		if v.ReadInConfig() == nil {
 			GetIPS6(v)
 		}
