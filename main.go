@@ -87,12 +87,21 @@ func StartBGP() *gobgp.BgpServer {
 	v := viper.New()
 	v.SetConfigType("toml")
 	v.SetConfigFile(cfg)
-	v.ReadInConfig()
-	v.Unmarshal(&conf)
-	v.Unmarshal(&gconf)
+	err := v.ReadInConfig()
+	if err != nil {
+		Log.Err(err.Error())
+	}
+	err = v.Unmarshal(&conf)
+	if err != nil {
+		Log.Err(err.Error())
+	}
+	err = v.Unmarshal(&gconf)
+	if err != nil {
+		Log.Err(err.Error())
+	}
 	s := gobgp.NewBgpServer()
 	go s.Serve()
-	err := s.Start(&conf.Global)
+	err = s.Start(&conf.Global)
 	if err != nil {
 		Log.Err(err.Error())
 		return nil
@@ -171,22 +180,30 @@ func main() {
 	var as string
 	ASList.As = make(map[string]Data)
 
+	// Init log
+	InitLog(os.Stdout, os.Stderr)
+
 	InitAsn()
 	go InitUnkAs()
 	go UpdateDelegation()
 
 	// Parse flags
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
-	flag.StringVar(&cfg, "f", "", "Config file")
+	flag.StringVar(&cfg, "f", "/etc/goasmap/goasmap.conf", "Config file")
 	flag.Parse()
 
 	// Init Radix
 	InitRadix()
+	if debug {
+		Log.Debug("Radix tree initialized with custom IPv4 and IPv6")
+	}
 
-	InitLog(os.Stdout, os.Stderr)
 	s := StartBGP()
 	if s == nil {
 		return
+	}
+	if debug {
+		Log.Debug("BGP server running")
 	}
 
 	// Init and Launch DNS
@@ -197,6 +214,9 @@ func main() {
 	go tcpdns.ListenAndServe()
 	dns.HandleFunc(".", handleRequest)
 	InitDnsZone()
+	if debug {
+		Log.Debug("DNS server running")
+	}
 
 	// Start grpc Server
 	grpcServer := api.NewGrpcServer(s, "127.0.0.1:50051")

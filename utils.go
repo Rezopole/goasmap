@@ -27,7 +27,7 @@ func InitLog(infoHandle, errorHandle io.Writer) {
 
 	Log, err = syslog.New(syslog.LOG_NOTICE, "goasmap")
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 }
 
